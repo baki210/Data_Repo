@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="b5deb3fa-7839-4f80-9db9-b9e8a576d4e4" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="employee_plainFlow" doc:id="2f214597-8dfc-4190-a74e-320a66b0ec1a" >
+		<http:listener doc:name="Listener" doc:id="cfde1da4-c471-4a9e-8814-c9a27f1fccb2" config-ref="HTTP_Listener_config" path="/test"/>
+		<ee:transform doc:name="Transform Message" doc:id="59ec45ff-822f-400b-8a91-f64fde42aa80" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output text/plain
+---
+read (payload.employee.'first_name' ++ " " ++ payload.employee.'last_name' ++ " " ++ "employee profile is created in HRMS System.", "text/plain")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="247e169c-1764-4a07-9158-4ba1644fcf18" />
+	</flow>
+	
+	
+	<flow name="mergeinputFlow" doc:id="def4dc87-9e9b-46ea-a112-269efec64d8d" >
+		<http:listener doc:name="Listener" doc:id="13e38b57-db07-4626-9407-e516d99b193b" config-ref="HTTP_Listener_config" path="/merge"/>
+		<ee:transform doc:name="Transform Message" doc:id="175a92cc-5d0d-48b1-8dc9-04782369a358" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="input1" ><![CDATA[{"employee":[{"id":"A007","first_name":"Jan","last_name":"Doe"},{"id":"A008","first_name":"Ron","l
+ast_name":"David"},{"id":"A009","first_name":"Jane","last_name":"Kane"},{"id":"A010","first_name":
+"Marsh","last_name":"Megan"},{"id":"A011","first_name":"Kelly","last_name":"Mitch"},{"id":"A012",
+"first_name":"Chris","last_name":"Vaste"}]}]]></ee:set-variable>
+				<ee:set-variable variableName="input2" ><![CDATA[{
+"scoreBoard":[
+{
+"id":"A007","subjects":["Maths","English","Arts","Drawimgs"],
+"score":[80,75,89,100]
+},
+{
+"id":"A008","subjects":["Maths","English","Arts","Drawimgs"],
+"score":[70,85,69,90]},
+{
+"id":"A021","subjects":["Maths","English","Arts","Drawimgs"],"score":[90,87,77,95]
+}
+]
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="cb33c48f-2a06-44dc-975c-78feaa89ebcd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	
+	
+certificate: (vars.input1.employee map (employee,indexofemployee) -> {
+	id:employee.id,
+	firstname:employee.first_name,
+	lastname:employee.last_name,
+	
+	(vars.input2.scoreBoard filter($.id contains employee.id)  map(item,indexofitem)->
+		{
+			MarksBySubjectWise:item.subjects map  {
+				($):item.score[$$]
+	 	
+			}
+			
+		}
+	)
+}
+
+
+)
+
+
+
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	
+	
+	<flow name="test_camelcaseFlow" doc:id="76476c6c-4055-42e7-95f5-dcd21e729d59" >
+		<http:listener doc:name="Listener" doc:id="9b3e0065-3b6e-40b8-92fc-72fca61a9572" config-ref="HTTP_Listener_config" path="/camelcase"/>
+		<ee:transform doc:name="Transform Message" doc:id="48cfb198-2e7f-4fcf-9f37-4dd3cab9a5de" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[output text/plain
+---
+read(payload.employee.'first_name' ++ " " ++ payload.employee.'last_name' ++ " " ++ "employee profile is created in HRMS System.", "text/plain")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<java:new doc:name="Java" doc:id="6f315a7d-eff5-460d-b713-059ab7f23e93" class="test_camelcase.camelCasae" constructor="toCamelCase(String)">
+			<java:args ><![CDATA[#[{
+	arg0: payload as String
+}]]]></java:args>
+		</java:new>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="8ab1ff9d-2633-40b0-9ff9-5af3180f2fc8" />
+	</flow>
+	
+	<flow name="uriparameterFlow" doc:id="9110ac90-0653-481c-9e80-c9d08b64e8e0" >
+		<http:listener doc:name="Listener" doc:id="1c54b3bd-5272-4c30-a4e4-38f8979277e0" config-ref="HTTP_Listener_config" path="/test/{num}"/>
+		<ee:transform doc:name="Transform Message" doc:id="f3a42782-60b3-49cc-8e36-dbb5a762a930" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+---
+
+{
+
+"test":  1 to attributes.uriParams.num
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="37e58ed3-dbde-4751-984b-c00a19d4574f" />
+	</flow>
+	
+</mule>
